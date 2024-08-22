@@ -1,0 +1,21 @@
+# Ignore .idea directory (PHPStorm specific)
+.idea/
+
+# Symfony specific files
+/var/
+/vendor/
+/.env.local
+.env.local.php
+.env.*.local
+
+# Other common exclusions
+*.log
+*.cache
+*.lock
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
