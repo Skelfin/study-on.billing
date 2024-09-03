@@ -1,12 +1,15 @@
 # Ignore .idea directory (PHPStorm specific)
 .idea/
 
+
+
 # Symfony specific files
 /var/
 /vendor/
 /.env.local
 .env.local.php
 .env.*.local
+.env.local.test
 
 # Other common exclusions
 *.log
@@ -19,3 +22,8 @@
 *~
 .DS_Store
 Thumbs.db
+
+node_modules
+###> lexik/jwt-authentication-bundle ###
+/config/jwt/*.pem
+.env
