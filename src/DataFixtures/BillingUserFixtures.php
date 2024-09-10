@@ -31,7 +31,7 @@ class BillingUserFixtures extends Fixture
         $admin = new BillingUser();
         $admin->setEmail('admin@example.com');
         $admin->setRoles(['ROLE_SUPER_ADMIN']);
-        $admin->setBalance(5000.0); // Устанавливаем баланс
+        $admin->setBalance(5000.10); // Устанавливаем баланс
         $hashedPassword = $this->passwordHasher->hashPassword($admin, 'adminpassword');
         $admin->setPassword($hashedPassword);
         $manager->persist($admin);

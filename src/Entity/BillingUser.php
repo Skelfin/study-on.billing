@@ -38,7 +38,8 @@ class BillingUser implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function setBalance(float $balance): self
     {
-        $this->balance = $balance;
+        // Округляем баланс до двух знаков после запятой
+        $this->balance = round($balance, 2);
         return $this;
     }
 
