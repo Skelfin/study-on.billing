@@ -14,6 +14,8 @@ use JMS\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use OpenApi\Annotations as OA;
+use Gesdinet\JWTRefreshTokenBundle\Generator\RefreshTokenGeneratorInterface;
+use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
 
 class RegistrationController extends AbstractController
 {
@@ -70,7 +72,9 @@ class RegistrationController extends AbstractController
         Request $request,
         SerializerInterface $serializer,
         ValidatorInterface $validator,
-        EntityManagerInterface $entityManager
+        EntityManagerInterface $entityManager,
+        RefreshTokenGeneratorInterface $refreshTokenGenerator,
+        RefreshTokenManagerInterface $refreshTokenManager
     ): Response {
         $userDto = $serializer->deserialize($request->getContent(), UserDto::class, 'json');
         $errors = $validator->validate($userDto);
@@ -89,8 +93,19 @@ class RegistrationController extends AbstractController
         $entityManager->persist($user);
         $entityManager->flush();
 
+        // Создание JWT-токена
         $token = $this->jwtManager->create($user);
 
-        return $this->json(['token' => $token], Response::HTTP_CREATED);
+        // Создание refresh-токена
+        $refreshToken = $refreshTokenGenerator->createForUserWithTtl(
+            $user,
+            (new \DateTime())->modify('+1 month')->getTimestamp()
+        );
+        $refreshTokenManager->save($refreshToken);
+
+        return $this->json([
+            'token' => $token,
+            'refresh_token' => $refreshToken->getRefreshToken(),
+        ], Response::HTTP_CREATED);
     }
 }

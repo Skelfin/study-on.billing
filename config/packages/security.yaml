@@ -33,6 +33,12 @@ security:
       stateless: true
       security: false
 
+    api_token_refresh:
+      pattern: ^/api/v1/token/refresh
+      stateless: true
+      refresh_jwt:
+        check_path: /api/v1/token/refresh
+
     main:
       lazy: true
       provider: app_user_provider
@@ -44,6 +50,7 @@ security:
     - { path: ^/api/v1/register, roles: IS_AUTHENTICATED_ANONYMOUSLY }
     - { path: ^/api/v1/doc, roles: IS_AUTHENTICATED_ANONYMOUSLY }
     - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+    - { path: ^/api/v1/token/refresh, roles: PUBLIC_ACCESS }
 
 when@test:
   security:
