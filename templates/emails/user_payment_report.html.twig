@@ -1,0 +1,32 @@
+{# templates/emails/user_payment_report.html.twig #}
+{% extends 'emails/base_email.html.twig' %}
+
+{% block title %}
+Ваш отчет об оплаченных курсах за период {{ startDate|date('d.m.Y') }} - {{ endDate|date('d.m.Y') }}
+{% endblock %}
+
+{% block body %}
+<p>Уважаемый {{ user.email }},</p>
+<p>Ваш отчет об оплаченных курсах за период {{ startDate|date('d.m.Y') }} - {{ endDate|date('d.m.Y') }}:</p>
+<table style="border-collapse: collapse; width: 100%;" cellpadding="5" cellspacing="0">
+    <thead>
+        <tr style="border: 1px solid #dddddd; padding: 8px; background-color: #f2f2f2;">
+            <th>Название курса</th>
+            <th>Тип курса</th>
+            <th>Дата оплаты</th>
+            <th>Сумма</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for transaction in transactions %}
+            <tr style="border: 1px solid #dddddd; padding: 8px;">
+                <td>{{ transaction.course_name }}</td>
+                <td>{{ transaction.course_type }}</td>
+                <td>{{ transaction.createdAt|date('d.m.Y H:i') }}</td>
+                <td>{{ transaction.amount|number_format(2, '.', ' ') }} руб.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<p><strong>Итого:</strong> {{ totalAmount|number_format(2, '.', ' ') }} руб.</p>
+{% endblock %}
