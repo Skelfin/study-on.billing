@@ -13,15 +13,29 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'UNIQ_COURSE_CODE', columns: ['code'])]
 class Course
 {
+
+    public const TYPE_RENT = 1;
+    public const TYPE_BUY = 2;
+    public const TYPE_FREE = 3;
+
+    private static array $typeNames = [
+        self::TYPE_RENT => 'rent',
+        self::TYPE_FREE => 'free',
+        self::TYPE_BUY => 'buy',
+    ];
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private int $id;
 
-    #[ORM\Column(length: 255, nullable: true)]
+    #[ORM\Column(length: 255, nullable: false)]
     private string $code;
 
-    #[ORM\Column(type: Types::SMALLINT, nullable: true)]
+    #[ORM\Column(length: 255, nullable: false)]
+    private string $name;
+
+    #[ORM\Column(type: Types::SMALLINT, nullable: false)]
     private int $type;
 
     #[ORM\Column]
@@ -51,6 +65,18 @@ class Course
     public function setCode(string $code): static
     {
         $this->code = $code;
+
+        return $this;
+    }
+
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    public function setName(string $name): static
+    {
+        $this->name = $name;
 
         return $this;
     }
@@ -100,12 +126,16 @@ class Course
     public function removeTransaction(Transaction $transaction): static
     {
         if ($this->transactions->removeElement($transaction)) {
-            // set the owning side to null (unless already changed)
             if ($transaction->getCourse() === $this) {
                 $transaction->setCourse(null);
             }
         }
 
         return $this;
+    }
+
+    public function getTypeName(): string
+    {
+        return self::$typeNames[$this->type] ?? 'unknown';
     }
 }

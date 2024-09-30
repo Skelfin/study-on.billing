@@ -9,6 +9,15 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: TransactionRepository::class)]
 class Transaction
 {
+
+    public const TYPE_PAYMENT = 1;
+    public const TYPE_DEPOSIT = 2;
+
+    private static array $typeNames = [
+        self::TYPE_PAYMENT => 'payment',
+        self::TYPE_DEPOSIT => 'deposit',
+    ];
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -21,7 +30,7 @@ class Transaction
     #[ORM\ManyToOne(inversedBy: 'transactions')]
     private ?Course $course = null;
 
-    #[ORM\Column(type: Types::SMALLINT, nullable: true)]
+    #[ORM\Column(type: Types::SMALLINT, nullable: false)]
     private int $type;
 
     #[ORM\Column]
@@ -65,6 +74,11 @@ class Transaction
     public function getType(): ?int
     {
         return $this->type;
+    }
+
+    public function getTypeName(): string
+    {
+        return self::$typeNames[$this->type] ?? 'unknown';
     }
 
     public function setType(int $type): static

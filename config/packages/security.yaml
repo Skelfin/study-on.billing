@@ -39,6 +39,16 @@ security:
       refresh_jwt:
         check_path: /api/v1/token/refresh
 
+    courses:
+      pattern: ^/api/v1/courses$
+      stateless: true
+      security: false
+
+    name_course:
+      pattern: ^/api/v1/courses/[^/]+$
+      stateless: true
+      security: false
+
     main:
       lazy: true
       provider: app_user_provider
@@ -48,9 +58,15 @@ security:
   access_control:
     - { path: ^/api/v1/auth, roles: IS_AUTHENTICATED_ANONYMOUSLY }
     - { path: ^/api/v1/register, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+    - { path: ^/api/v1/courses/[^/]+/pay$, roles: IS_AUTHENTICATED_FULLY }
+    - { path: ^/api/v1/courses$, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+    - { path: ^/api/v1/courses/[^/]+$, roles: IS_AUTHENTICATED_ANONYMOUSLY }
     - { path: ^/api/v1/doc, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+    - { path: ^/api/v1/courses/new$, roles: ROLE_SUPER_ADMIN }
+    - { path: ^/api/v1/courses/[^/]+/edit$, roles: ROLE_SUPER_ADMIN }
+    - { path: ^/api/v1/courses/[^/]+/delete$, roles: ROLE_SUPER_ADMIN }
     - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
-    - { path: ^/api/v1/token/refresh, roles: PUBLIC_ACCESS }
+
 
 when@test:
   security:
