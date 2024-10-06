@@ -13,7 +13,6 @@ use Symfony\Component\Routing\Annotation\Route;
 use JMS\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use OpenApi\Annotations as OA;
 use Gesdinet\JWTRefreshTokenBundle\Generator\RefreshTokenGeneratorInterface;
 use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
 
@@ -30,43 +29,6 @@ class RegistrationController extends AbstractController
         $this->passwordHasher = $passwordHasher;
     }
 
-    /**
-     * @OA\Post(
-     *     path="/api/v1/register",
-     *     description="Регистрация нового пользователя",
-     *     @OA\RequestBody(
-     *         required=true,
-     *         content={
-     *             @OA\MediaType(
-     *                 mediaType="application/json",
-     *                 @OA\Schema(
-     *                     type="object",
-     *                     @OA\Property(property="email", type="string", example="user@example.com"),
-     *                     @OA\Property(property="password", type="string", example="password123")
-     *                 )
-     *             )
-     *         }
-     *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="Пользователь успешно зарегистрирован",
-     *         @OA\JsonContent(
-     *             type="object",
-     *             @OA\Property(property="token", type="string", example="jwt_token_here")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=400,
-     *         description="Ошибка валидации",
-     *         @OA\JsonContent(type="object")
-     *     ),
-     *     @OA\Response(
-     *         response=409,
-     *         description="Email уже используется",
-     *         @OA\JsonContent(type="object")
-     *     )
-     * )
-     */
     #[Route('/api/v1/register', name: 'api_register', methods: ['POST'])]
     public function register(
         Request $request,
@@ -93,10 +55,8 @@ class RegistrationController extends AbstractController
         $entityManager->persist($user);
         $entityManager->flush();
 
-        // Создание JWT-токена
         $token = $this->jwtManager->create($user);
 
-        // Создание refresh-токена
         $refreshToken = $refreshTokenGenerator->createForUserWithTtl(
             $user,
             (new \DateTime())->modify('+1 month')->getTimestamp()

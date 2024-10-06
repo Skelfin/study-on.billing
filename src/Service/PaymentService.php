@@ -5,130 +5,149 @@ namespace App\Service;
 use App\Entity\BillingUser;
 use App\Entity\Course;
 use App\Entity\Transaction;
+use App\Exception\InsufficientFundsException;
+use App\Exception\CourseAlreadyPurchasedException;
 use App\Repository\TransactionRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Log\LoggerInterface;
 
 class PaymentService
 {
     private EntityManagerInterface $entityManager;
     private TransactionRepository $transactionRepository;
-    private LoggerInterface $logger;
     private float $initialDepositAmount;
 
     public function __construct(
         EntityManagerInterface $entityManager,
         TransactionRepository $transactionRepository,
-        LoggerInterface $logger,
         float $initialDepositAmount
     ) {
         $this->entityManager = $entityManager;
         $this->transactionRepository = $transactionRepository;
-        $this->logger = $logger;
         $this->initialDepositAmount = $initialDepositAmount;
     }
 
     /**
-     * Пополнение счета пользователя.
-     *
+     * Пополнение баланса пользователя
      * @param BillingUser $user
      * @param float $amount
      * @return Transaction
-     * @throws \Exception
      */
     public function deposit(BillingUser $user, float $amount): Transaction
     {
-        $this->entityManager->beginTransaction();
-
-        try {
-            $transaction = new Transaction();
-            $transaction->setUser($user);
-            $transaction->setType(Transaction::TYPE_DEPOSIT);
-            $transaction->setAmount($amount);
-            $transaction->setCreatedAt(new \DateTimeImmutable());
-
-            $this->entityManager->persist($transaction);
-
+        return $this->processTransaction(function () use ($user, $amount) {
+            $transaction = $this->createAndPersistTransaction($user, $amount, Transaction::TYPE_DEPOSIT);
             $user->setBalance($user->getBalance() + $amount);
             $this->entityManager->persist($user);
 
-            $this->entityManager->flush();
-            $this->entityManager->commit();
-
             return $transaction;
-        } catch (\Exception $e) {
-            $this->entityManager->rollback();
-            $this->logger->error('Ошибка при пополнении счета: ' . $e->getMessage());
-            throw $e;
-        }
+        });
     }
 
     /**
-     * 
-     *
+     * Оплата курса
      * @param BillingUser $user
      * @param Course $course
      * @return Transaction
-     * @throws \Exception
+     * @throws InsufficientFundsException
+     * @throws CourseAlreadyPurchasedException
      */
     public function payCourse(BillingUser $user, Course $course): Transaction
     {
-        $this->entityManager->beginTransaction();
-
-        try {
+        return $this->processTransaction(function () use ($user, $course) {
             $coursePrice = $course->getPrice();
 
             if ($user->getBalance() < $coursePrice) {
-                throw new \Exception('Недостаточно средств для оплаты курса.');
+                throw new InsufficientFundsException('Недостаточно средств для оплаты курса.');
             }
 
-            $existingTransaction = $this->transactionRepository->findOneBy([
-                'user' => $user,
-                'course' => $course,
-                'type' => Transaction::TYPE_PAYMENT,
-            ]);
-
-            if ($existingTransaction) {
-                throw new \Exception('Курс уже оплачен.');
+            if ($this->isCourseAlreadyPurchased($user, $course)) {
+                throw new CourseAlreadyPurchasedException('Курс уже оплачен.');
             }
 
-            $transaction = new Transaction();
-            $transaction->setUser($user);
-            $transaction->setCourse($course);
-            $transaction->setType(Transaction::TYPE_PAYMENT);
-            $transaction->setAmount($coursePrice);
-            $transaction->setCreatedAt(new \DateTimeImmutable());
+            $transaction = $this->createAndPersistTransaction($user, $coursePrice, Transaction::TYPE_PAYMENT, $course);
 
             if ($course->getTypeName() === 'rent') {
-                $expiresAt = (new \DateTimeImmutable())->modify('+1 week');
-                $transaction->setExpiresAt($expiresAt);
+                $transaction->setExpiresAt((new \DateTimeImmutable())->modify('+1 week'));
             }
-
-            $this->entityManager->persist($transaction);
 
             $user->setBalance($user->getBalance() - $coursePrice);
             $this->entityManager->persist($user);
 
+            return $transaction;
+        });
+    }
+
+    /**
+     * Инициализация баланса пользователя
+     *
+     * @param BillingUser $user
+     * @return Transaction
+     */
+    public function initializeUserBalance(BillingUser $user): Transaction
+    {
+        return $this->deposit($user, $this->initialDepositAmount);
+    }
+
+    /**
+     * Общая логика транзакций
+     *
+     * @param callable $operation
+     * @return Transaction
+     */
+    private function processTransaction(callable $operation): Transaction
+    {
+        $this->entityManager->beginTransaction();
+
+        try {
+            $transaction = $operation();
             $this->entityManager->flush();
             $this->entityManager->commit();
 
             return $transaction;
         } catch (\Exception $e) {
             $this->entityManager->rollback();
-            $this->logger->error('Ошибка при оплате курса: ' . $e->getMessage());
             throw $e;
         }
     }
 
     /**
-     * 
+     * Проверка, был ли курс уже оплачен пользователем.
      *
      * @param BillingUser $user
-     * @return Transaction
-     * @throws \Exception
+     * @param Course $course
+     * @return bool
      */
-    public function initializeUserBalance(BillingUser $user): Transaction
+    private function isCourseAlreadyPurchased(BillingUser $user, Course $course): bool
     {
-        return $this->deposit($user, $this->initialDepositAmount);
+        return (bool) $this->transactionRepository->findOneBy([
+            'user' => $user,
+            'course' => $course,
+            'type' => Transaction::TYPE_PAYMENT,
+        ]);
+    }
+    /**
+     * Создание и сохранение транзакции.
+     *
+     * @param BillingUser $user
+     * @param float $amount
+     * @param string $type
+     * @param Course|null $course
+     * @return Transaction
+     */
+    private function createAndPersistTransaction(BillingUser $user, float $amount, string $type, ?Course $course = null): Transaction
+    {
+        $transaction = new Transaction();
+        $transaction->setUser($user);
+        $transaction->setType($type);
+        $transaction->setAmount($amount);
+        $transaction->setCreatedAt(new \DateTimeImmutable());
+
+        if ($course !== null) {
+            $transaction->setCourse($course);
+        }
+
+        $this->entityManager->persist($transaction);
+
+        return $transaction;
     }
 }
